@@ -15,6 +15,7 @@ class make_a_schedule:
         self.language = language
         self.study_abroad = study_abroad
         self.credits = credits
+        self.added_courses = set()
 
 
     def clean_course_data (self):
@@ -40,6 +41,58 @@ class make_a_schedule:
             elif i['coll'] is None: 
                 i['coll'] = []
         return self.all_courses
+
+    def get_unmet_prereqs(self, course, schedule = None):
+        """
+        Checks which prerequisites for a given course are not met by the current schedule.
+
+        Args:
+            course (dict): The course to check prerequisites for.
+            schedule (list): The current list of scheduled course dictionaries.
+
+        Returns:
+            list: A list of course codes representing unmet prerequisites.
+        """
+        if schedule == None: 
+            schedule = self.added_courses
+        scheduled_codes = {c["course_code"] for c in schedule}
+        prereqs = course.get("prereqs", [])
+        unmet = [code for code in prereqs if code not in scheduled_codes]
+        return unmet
+
+    def add_course(self, course_list, schedule):
+        """
+        Adds a valid course to the schedule, checking for duplicates and unmet prerequisites.
+
+        Args:
+            course_list (list): List of course dictionaries to consider.
+            schedule (list): Current course schedule.
+
+        Returns:
+            dict or None: The course added, or None if no valid course was found.
+        """
+        if not course_list:
+            return None
+
+        attempted = 0
+        max_attempts = len(course_list)
+
+        while attempted < max_attempts:
+            my_course = random.choice(course_list)
+            attempted += 1
+
+            if my_course["course_code"] in self.added_courses:
+                continue
+
+            unmet_prereqs = self.get_unmet_prereqs(my_course)
+
+            if not unmet_prereqs:
+                schedule.append(my_course)
+                self.added_courses.add(my_course["course_code"])
+                self.credits += my_course.get("credits", 0)
+                return my_course
+
+        return None
 
     def get_minor_courses(self, seed = None): 
         if seed is not None:
@@ -74,16 +127,49 @@ class make_a_schedule:
         selected_classes = set()
         for requirement in major_info["requirements"]:
             if requirement["type"] == "all_of":
-                selected_classes.update(requirement["courses"])
+                for course_code in requirement["courses"]:
+                    course = next((c for c in self.all_courses if c["course_code"] == course_code), None)
+                    if course:
+                        selected_classes.add(course)
             elif requirement["type"] == "choose_n":
                 n = requirement["n"]
                 for group in requirement["groups"]:
-                    available_courses = []
+                    available_courses_codes = []
                     if group["type"] == "any_of":
-                        available_courses.extend(group["courses"])
-                        available_courses = list(set(available_courses) - selected_classes)
-                        selected_courses = random.sample(available_courses, n)
-                        selected_classes.update(selected_courses)
+                        
+                        available_courses_codes.extend(group["courses"])
+                
+                        # Convert course codes into course dictionaries
+                        available_courses = [
+                            course for course in self.all_courses
+                            if course["course_code"] in available_courses_codes
+                        ]
+                        #filter out courses with unmet prereqs 
+                        filtered_courses = [
+                                course for course in available_courses
+                                if not self.get_unmet_prereqs(course, list(selected_classes))
+                            ]
+                        
+                        # If no courses have met prerequisites, include courses with unmet prerequisites
+                        if not filtered_courses:
+                            filtered_courses = available_courses
+
+                        group_selects = random.sample(filtered_courses, n) if filtered_courses else []
+                        
+                        # Add selected courses to theselected_courses set of selected classes
+                        selected_classes.update(group_selects)
+            
+                        for course in group_selects:
+                            unmet = self.get_unmet_prereqs(course, list(selected_classes))
+                            
+                            # Find full course dicts for unmet prereqs
+                            unmet_dicts = [
+                                c for c in self.all_courses if c["course_code"] in unmet
+                            ]
+                            
+                            # Add prereqs first
+                            selected_classes.update(unmet_dicts)
+                            
         if primary == True: 
             self.major1_classes = list(selected_classes)
             return self.major1_classes
@@ -106,72 +192,72 @@ class make_a_schedule:
             return self.all_reqs
         
 
-    def get_coll_classes(self, seed = None): 
-        coll_schedule = []
-        coll_100s = [d for d in self.all_courses if "COLL 100" in d["coll"]]
-        my_coll_100 = random.sample(coll_100s, 1)
-        coll_schedule.append(my_coll_100)
-        coll_150s = [d for d in self.all_courses if "COLL 150" in d["coll"] ]
-        my_coll_150 = random.sample(coll_150s, 1)
-        coll_schedule.append(my_coll_150)
-        coll_200_alvs = [d for d in self.all_courses if "COLL 200" in d["coll"] and "ALV" in d["domain"]]
-        my_coll_200alv = random.sample(coll_200_alvs, 1)
-        coll_schedule.append(my_coll_200alv)
-        coll_200_csis = [d for d in self.all_courses if "COLL 200" in d["coll"] and "CSI" in d["domain"]]
-        my_coll_200csi = random.sample(coll_200_csis, 1)
-        coll_schedule.append(my_coll_200csi)
-        coll_200_nqrs = [d for d in self.all_courses if "COLL 200" in d["coll"] and "NQR" in d["domain"]]
-        my_coll_200nqr = random.sample(coll_200_nqrs, 1)
-        coll_schedule.append(my_coll_200nqr)
-        if self.study_abroad == False: 
-            coll_300s = [d for d in self.all_courses if "COLL 300" in d["coll"]]
-            my_coll_300 = random.sample(coll_300s,1)
-            coll_schedule.append(my_coll_300)
-        coll_350s = [d for d in self.all_courses if "COLL 350" in d["coll"]]
-        my_coll_350 = random.sample(coll_350s,1)
-        coll_schedule.append(my_coll_350)
-        if self.language is not "N/A": 
-            if self.language == 'spanish': 
-                lang_req = ["HISP 101", "HISP 102", "HISP 201", "HISP 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'french': 
-                lang_req = ["FREN 101", "FREN 102", "FREN 201", "FREN 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'arabic': 
-                lang_req = ["ARAB 101", "ARAB 102", "ARAB 201", "ARAB 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'chinese': 
-                lang_req = ["CHIN 101", "CHIN 102", "CHIN 201", "CHIN 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'italian': 
-                lang_req = ["ITAL 101", "ITAL 102", "ITAL 201", "ITAL 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'german': 
-                lang_req = ["GRMN 101", "GRMN 102", "GRMN 201", "GRMN 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'japanese': 
-                lang_req = ["JAPN 101", "JAPN 102", "JAPN 201", "JAPN 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-            elif self.language == 'russian': 
-                lang_req = ["RUSN 101", "RUSN 102", "RUSN 201", "RUSN 202"]
-                for i in lang_req: 
-                    k = next((c for c in self.all_courses if c.get("course_code") == i), None)
-                    coll_schedule.append(k)
-        return coll_schedule
+    def add_coll_classes(self, seed = None): 
+        if seed:
+            random.seed(seed) 
+        schedule = []
+        added_courses = set(self.all_reqs) 
+       
+        #Additional Knowledge Courses 
+        if not any("ALV" in course["domain"] for course in schedule):
+            self.add_course([d for d in self.all_courses if "ALV" in d["domain"]], schedule)
+        if not any("CSI" in course["domain"] for course in schedule):    
+            self.add_course([d for d in self.all_courses if "CSI" in d["domain"]], schedule)
+        if not any("NQR" in course["domain"] for course in schedule):
+            self.add_course([d for d in self.all_courses if "NQR" in d["domain"]], schedule)
+
+        #COLL Classes (400 is in major)        
+        self.add_course([d for d in self.all_courses if "COLL 100" in d["coll"]], schedule)
+        self.add_course([d for d in self.all_courses if "COLL 150" in d["coll"]], schedule)
+        self.add_course([d for d in self.all_courses if "COLL 200" in d["coll"] and "ALV" in d["domain"]], schedule)
+        self.add_course([d for d in self.all_courses if "COLL 200" in d["coll"] and "CSI" in d["domain"]], schedule)
+        self.add_course([d for d in self.all_courses if "COLL 200" in d["coll"] and "NQR" in d["domain"]], schedule)
+        if not self.study_abroad:
+            self.add_course([d for d in self.all_courses if "COLL 300" in d["coll"]], schedule)
+        self.add_course([d for d in self.all_courses if "COLL 350" in d["coll"]], schedule)
+
+        # Add language requirements
+        if self.language != "N/A":
+            language_codes = {
+                'spanish': ["HISP 101", "HISP 102", "HISP 201", "HISP 202"],
+                'french': ["FREN 101", "FREN 102", "FREN 201", "FREN 202"],
+                'arabic': ["ARAB 101", "ARAB 102", "ARAB 201", "ARAB 202"],
+                'chinese': ["CHIN 101", "CHIN 102", "CHIN 201", "CHIN 202"],
+                'italian': ["ITAL 101", "ITAL 102", "ITAL 201", "ITAL 202"],
+                'german': ["GRMN 101", "GRMN 102", "GRMN 201", "GRMN 202"],
+                'japanese': ["JAPN 101", "JAPN 102", "JAPN 201", "JAPN 202"],
+                'russian': ["RUSN 101", "RUSN 102", "RUSN 201", "RUSN 202"],
+            }
+            for lang_code in language_codes.get(self.language, []):
+                lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
+                if lang_course and lang_course["course_code"] not in added_courses:
+                    schedule.append(lang_course)
+                    added_courses.add(lang_course["course_code"])
+
+        #Math & Arts Proficency
+        if not any("MATH" in course["coll"] for course in schedule):
+            self.add_course([d for d in self.all_courses if "MATH" in d["COLL"]], schedule)
+        if not any("ARTS" in course["coll"] for course in schedule):
+            self.add_course([d for d in self.all_courses if "ARTS" in d["COLL"]], schedule)
+
+        self.coll_schedule = schedule
+        return 
+    
+    def add_any_electives(self):
+        self.get_required_classes()
+        self.add_coll_classes
+        credits_in_schedule = self.credits
+        for course in self.schedule:
+            credits_in_schedule += course["credits"]
+        
+
+
+one = make_a_schedule("economics", "N/A")
+clean = one.clean_course_data()
+more = [c for c in clean if len(c["prereqs"]) > 1]
+for i in more: 
+    print(i["course_code"], i["prereqs"])
+
 
 # subset_with_prereqs = [
 #     d for d in all_courses

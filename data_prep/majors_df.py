@@ -40,7 +40,7 @@ majors = {
                 {"type": "any_of", "courses": ["GOVT 401", "GOVT 402", "GOVT 403", "GOVT 404", "GOVT 433", "GOVT 435", "GOVT 440", "GOVT 454", "GOVT 455", "GOVT 465", "GOVT 470", "GOVT 482", "GOVT 489", "GOVT 491", "GOVT 493", "GOVT 494", "GOVT 495", "GOVT 496", "GOVT 498"]}
             ]},
             {"type": "choose_n", "n": 5, "groups": [
-                {"type": "any_of", "courses": ["GOVT 100", "GOVT 150", "GOVT 302", "GOVT 305", "GOVT 306", "GOVT 307", "GOVT 310", "GOVT 311", "GOVT 312", "GOVT 322", "GOVT 324", "GOVT 235", "GOVT 326", "GOVT 327", "GOVT 328", "GOVT 329", "GOVT 330", "GOVT 334", "GOVT 335",
+                {"type": "any_of", "courses": ["GOVT 150", "GOVT 302", "GOVT 305", "GOVT 306", "GOVT 307", "GOVT 310", "GOVT 311", "GOVT 312", "GOVT 322", "GOVT 324", "GOVT 235", "GOVT 326", "GOVT 327", "GOVT 328", "GOVT 329", "GOVT 330", "GOVT 334", "GOVT 335",
                                                "GOVT 336", "GOVT 337", "GOVT 338", "GOVT 339", "GOVT 340", "GOVT 350", "GOVT 351", "GOVT 352", "GOVT 353", "GOVT 355", "GOVT 360", "GOVT 361", "GOVT 370", "GOVT 372", "GOVT 373", "GOVT 374", "GOVT 388", "GOVT 389", "GOVT 390",
                                                "GOVT 391", "GOVT 392", "GOVT 393", "GOVT 394", "GOVT 401", "GOVT 402", "GOVT 403", "GOVT 404", "GOVT 433", "GOVT 435", "GOVT 440", "GOVT 454", "GOVT 455", "GOVT 465", "GOVT 470", "GOVT 482", "GOVT 489", "GOVT 491", "GOVT 493",
                                                "GOVT 494", "GOVT 495", "GOVT 496", "GOVT 498"]}

@@ -55,7 +55,7 @@ for i in links:
                 prereq_coreq_element = soup.find('em', string='Prereq/Corequisite(s):')
                 coll_curriculum_element = soup.find('em', string='College Curriculum:')
                 domain_anchored_element = soup.find('em', string=re.compile(r'Domain \(Anchored\):\s*'))
-                domain_reaching_element = soup.find('em', string=re.compile(r'Domain \(Reaching Out\):\s*'))
+                #domain_reaching_element = soup.find('em', string=re.compile(r'Domain \(Reaching Out\):\s*'))
                 additional_domain_element = soup.find('em', string=re.compile(r'Additional Domain \(if applicable\):\s*'))
                
 
@@ -109,10 +109,10 @@ for i in links:
                     if anchored:
                         domains.append(anchored)
 
-                if domain_reaching_element and domain_reaching_element.next_sibling:
-                    reaching = domain_reaching_element.next_sibling.strip()
-                    if reaching:
-                        domains.append(reaching)
+                # if domain_reaching_element and domain_reaching_element.next_sibling:
+                #     reaching = domain_reaching_element.next_sibling.strip()
+                #     if reaching:
+                #         domains.append(reaching)
 
                 if additional_domain_element and additional_domain_element.next_sibling:
                     additional = additional_domain_element.next_sibling.strip()
