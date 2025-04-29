@@ -51,10 +51,13 @@ for i in links:
                 title_element = soup.select_one('#course_preview_title')
                 credits_label = soup.find('em', string='Credits:')
                 prerequisite_element = soup.find('em', string='Prerequisite(s):')
+                coreq_element = soup.find('em', string='Corequisite(s):')
                 prereq_coreq_element = soup.find('em', string='Prereq/Corequisite(s):')
                 coll_curriculum_element = soup.find('em', string='College Curriculum:')
                 domain_anchored_element = soup.find('em', string=re.compile(r'Domain \(Anchored\):\s*'))
                 domain_reaching_element = soup.find('em', string=re.compile(r'Domain \(Reaching Out\):\s*'))
+                additional_domain_element = soup.find('em', string=re.compile(r'Additional Domain \(if applicable\):\s*'))
+               
 
                 course_code = None
                 if title_element and title_element.text:
@@ -88,6 +91,12 @@ for i in links:
                 # Remove duplicates if needed
                 prerequisites = list(set(prerequisites))
 
+                coreqs = [] 
+                if coreq_element: 
+                    for a_tag in coreq_element.find_all_next('a'):
+                        coreqs.append(a_tag.text.strip())
+
+
                 coll = None
                 if coll_curriculum_element:
                     sibling_text = coll_curriculum_element.find_next_sibling(text=True)
@@ -105,10 +114,16 @@ for i in links:
                     if reaching:
                         domains.append(reaching)
 
+                if additional_domain_element and additional_domain_element.next_sibling:
+                    additional = additional_domain_element.next_sibling.strip()
+                    if additional: 
+                        domains.append(additional)
+
                 course_data = {
                     "course_code": course_code,
                     "credits": credits,
                     "prereqs": prerequisites,
+                    "coreqs": coreqs,
                     "coll": coll,
                     "domain": domains,
                 }
