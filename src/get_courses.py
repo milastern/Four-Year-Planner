@@ -108,6 +108,7 @@ class make_a_schedule:
                 for course_code in requirement["courses"]:
                     course = next((c for c in self.all_courses if c["course_code"] == course_code), None)
                     if course:
+                        course['tag'] = 'minor requirement'
                         selected_classes.add(course["course_code"])
                         self.schedule.append(course)
                         self.added_courses.add(course["course_code"])
@@ -150,7 +151,7 @@ class make_a_schedule:
                             self.credits += course.get("credits", 0)
         for i in self.schedule: 
             if i["course_code"] in selected_classes and i["tag"] == "unassigned": 
-                    i["tag"] = "minor"
+                    i["tag"] = "minor elective"
     
 
     def get_major_classes(self, primary=True, seed=None):
@@ -158,6 +159,10 @@ class make_a_schedule:
             random.seed(seed)
         
         major_info = self.majors.get(self.major1 if primary else self.major2)
+        if primary:
+            major_num = 1
+        else: 
+            major_num = 2
         selected_classes = set()
 
         for requirement in major_info["requirements"]:
@@ -165,10 +170,12 @@ class make_a_schedule:
                 for course_code in requirement["courses"]:
                     course = next((c for c in self.all_courses if c["course_code"] == course_code), None)
                     if course:
+                        course["tag"] = f"major {major_num} requirement"
                         selected_classes.add(course["course_code"])
                         self.schedule.append(course)
                         self.added_courses.add(course["course_code"])
                         self.credits += course.get("credits", 0)
+
 
             elif requirement["type"] == "choose_n":
                 n = requirement["n"]
@@ -208,10 +215,8 @@ class make_a_schedule:
 
         for i in self.schedule: 
             if i["course_code"] in selected_classes and i["tag"] == "unassigned": 
-                if primary: 
-                    i["tag"] = "major1"
-                else: 
-                    i["tag"] = "major2"
+                i["tag"] = f"major {major_num} elective"
+               
 
            
 
@@ -227,6 +232,27 @@ class make_a_schedule:
         if not any("NQR" in course["domain"] for course in self.schedule):
             self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
 
+
+        #Math & Arts Proficency
+        if not any("MATH" in course["coll"] for course in self.schedule):
+            self.add_course([d for d in self.all_courses if "MATH" in d["coll"]])
+        if not any("ARTS" in course["coll"] for course in self.schedule):
+            self.add_course([d for d in self.all_courses if "ARTS" in d["coll"]])
+        
+        for i in self.schedule: 
+             if i["tag"] == "unassigned": 
+                    i["tag"] = "proficency"
+        
+        if self.major1 == "kinesiology" or self.major2 == "kinesiology":
+            self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
+            self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
+            self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
+        
+            for i in self.schedule: 
+                if i["tag"] == "unassigned": 
+                        i["tag"] = "B.S. requirement"
+
+
         #COLL Classes (400 is in major)        
         self.add_course([d for d in self.all_courses if "COLL 100" in d["coll"]])
         self.add_course([d for d in self.all_courses if "COLL 150" in d["coll"]])
@@ -237,7 +263,11 @@ class make_a_schedule:
             self.add_course([d for d in self.all_courses if "COLL 300" in d["coll"]])
         self.add_course([d for d in self.all_courses if "COLL 350" in d["coll"]])
 
-        # Add language requirements
+        for i in self.schedule: 
+             if i["tag"] == "unassigned": 
+                    i["tag"] = "coll"
+
+         # Add language requirements
         if self.language != "N/A":
             language_codes = {
                 'spanish': ["HISP 101", "HISP 102", "HISP 201", "HISP 202"],
@@ -251,20 +281,33 @@ class make_a_schedule:
             }
             for lang_code in language_codes.get(self.language, []):
                 lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
-                if lang_course and lang_course["course_code"] not in added_courses:
-                    schedule.append(lang_course)
-                    added_courses.add(lang_course["course_code"])
+                if lang_course and lang_course["course_code"] not in self.added_courses:
+                    self.schedule.append(lang_course)
+                    self.added_courses.add(lang_course["course_code"])
+            
+        if self.major1 == "international relations" or self.major2 == "international relations":
+            language_sup = {
+                'spanish': ["HISP 206", "HISP 207", "HISP 208", "HISP 209", "HISP 240"],
+                'french': ["FREN 206", "FREN 210", "FREN 212", "FREN 303", "FREN 303A", "FREN 304"],
+                'arabic': ["ARAB 290", "ARAB 301", "ARAB 302", "ARAB 303", "ARAB 304"],
+                'chinese': ["CHIN 301", "CHIN 302", "CHIN 308", "CHIN 386"],
+                'italian': ["ITAL 206", "ITAL 208", "ITAL 303", "ITAL 317"],
+                'german': ["GRMN 205", "GRMN 206", "GRMN 212", "GRMN 290", "GRMN 306", "GRMN 310"],
+                'japanese': ["JAPN 300", "JAPN 301", "JAPN 302", "JAPN 303", "JAPN 305", "JAPN 307"],
+                'russian': ["RUSN 303", "RUSN 304", "RUSN 310", "RUSN 320","RUSN 330", "RUSN 340",  "RUSN 306"],
+            } 
+            for lang_code in language_sup.get(self.language, []):
+                lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
+                if lang_course and lang_course["course_code"] not in self.added_courses:
+                    self.schedule.append(lang_course)
+                    self.added_courses.add(lang_course["course_code"])
 
-        #Math & Arts Proficency
-        if not any("MATH" in course["coll"] for course in self.schedule):
-            self.add_course([d for d in self.all_courses if "MATH" in d["coll"]])
-        if not any("ARTS" in course["coll"] for course in self.schedule):
-            self.add_course([d for d in self.all_courses if "ARTS" in d["coll"]])
-        
+
+            
         for i in self.schedule: 
-             if i["tag"] == "unassigned": 
-                    i["tag"] = "COLL"
-        
+            if i["tag"] == "unassigned": 
+                i["tag"] = "lang"
+
         return self.schedule
     
     def add_any_electives(self):
@@ -281,9 +324,10 @@ class make_a_schedule:
         print(f"Your Schedule has {self.credits} credits")
         return
         
-one = make_a_schedule("economics", "N/A")
+one = make_a_schedule("economics", "french", "government")
 clean = one.clean_course_data()
 then = one.get_major_classes()
+ok = one.get_major_classes(primary= False)
 so = one.add_coll_classes()
 one.compile()
 

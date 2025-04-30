@@ -56,6 +56,10 @@ app.layout = html.Div([
             id='dd_lang',
             options=[{'label': opt, 'value': opt} for opt in langs],
             placeholder="Choose..."
+        ),
+        html.P(
+            "NOTE: International Relations Majors must select a language even if they have already met the FLP requirement.",
+            style={'marginBottom': '20px'}
         )
     ], style={'marginBottom': '20px'}),
 

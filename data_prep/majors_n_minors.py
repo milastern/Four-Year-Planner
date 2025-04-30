@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 
-majors = {
+majors_dict = {
     "psychology": {
         "requirements": [
             {"type": "all_of", "courses": ["PSYC 201", "PSYC 202", "PSYC 301", "PSYC 302"]},
@@ -94,12 +94,70 @@ majors = {
                                                 "HIST 420"]}
             ]},
             {"type": "choose_n", "n": 4 , "groups": [
-                    {"type": "any_of", "courses": ["HIST 201", "HIST 211", "HIST 212", "HIST 213", "HIST 214", "HIST 215", "HIST 216", "HIST 217", ]}
-                ]} 
+                    {"type": "any_of", "courses": ["HIST 201", "HIST 211", "HIST 212", "HIST 213", "HIST 214", "HIST 215", "HIST 216", "HIST 217", "HIST 218", "HIST 219", "HIST 220", "HIST 221", "HIST 222", "HIST 223", "HIST 224", "HIST 225", "HIST 226", "HIST 228", "HIST 230",
+                                                    "HIST 235", "HIST 236", "HIST 237", "HIST 238", "HIST 240", "HIST 241", "HIST 242", "HIST 243", "HIST 255", "HIST 256", "HIST 260", "HIST 261", "HIST 265", "HIST 278", "HIST 279", "HIST 280", "HIST 281", "HIST 282", "HIST 283", 
+                                                    "HIST 284", "HIST 299", "HIST 301", "HIST 304", "HIST 306", "HIST 309", "HIST 311", "HIST 312", "HIST 313", "HIST 315", "HIST 316", "HIST 317", "HIST 318", "HIST 319", "HIST 320", "HIST 321", "HIST 322", "HIST 323", "HIST 324", 
+                                                    "HIST 325", "HIST 326", "HIST 327", "HIST 330","HIST 331", "HIST 332", "HIST 333", "HIST 334", "HIST 336", "HIST 337", "HIST 341", "HIST 342", "HIST 344", "HIST 345", "HIST 346", "HIST 347", "HIST 348", "HIST 349", "HIST 350", 
+                                                    "HIST 351", "HIST 352", "HIST 353", "HIST 355", "HIST 357", "HIST 358", "HIST 359", "HIST 360", "HIST 361", "HIST 362", "HIST 363", "HIST 364", "HIST 367", "HIST 368", "HIST 369", "HIST 370", "HIST 373", "HIST 377", "HIST 378", 
+                                                    "HIST 379", "HIST 382", "HIST 383", "HIST 384", "HIST 385", "HIST 386", "HIST 387", "HIST 388", "HIST 391", "HIST 392", "HIST 393", "HIST 394", "HIST 400", "HIST 401", "HIST 402", "HIST 403", "HIST 404", "HIST 405", "HIST 406",
+                                                    "HIST 407", "HIST 408", "HIST 409", "HIST 410", "HIST 411", "HIST 412", "HIST 413", "HIST 414", "HIST 467", "HIST 468", "HIST 478", "HIST 479", "HIST 490C", "HIST 491C", "HIST 494", "HIST 495", "HIST 496", "HIST 499"]}
+            ]} 
         ] 
-    }
+    },
+
+    "international relations": {
+        "requirements": [
+            {"type": "all_of", "courses": ["GOVT 204", "ECON 101", "ECON 102", "GOVT 328", "GOVT 329", "HIST 192", "INRL 300", "INRL 300D"]},
+            {"type": "choose_n", "n": 1, "groups": [
+                {"type": "any_of", "courses": ["ECON 303", "ECON 304"]},
+                {"type": "any_of", "courses": ["ECON 475", "ECON 476"]},
+                {"type": "any_of", "courses": ["SOCL 205", "SOCL 313", "SOCL 314"]},
+                {"type": "any_of", "courses": ["BUAD 231", "GOVT 301", "GOVT 302", "GOVT 307", "ECON 307", "ECON 308", "PSYC 302", "SOCL 352", "SOCL 353"]},
+                {"type": "any_of", "courses": ["ANTH 335", "ANTH 338", "GOVT 311", "GOVT 312", "GOVT 334", "GOVT 335", "GOVT 336", "GOVT 337", "GOVT 338", "GOVT 339", "HIST 280", "HIST 309", "HIST 304", "HIST 325", "HIST 330", "HIST 331", "HIST 332", "HIST 333", "HIST 370",
+                                                "HIST 373", "HIST 378", "HIST 384", "HIST 386", "SOCL 312", "SOCL 313"]},
+                {"type": "any_of", "courses": ["ECON 481", "ECON 485", "GOVT 402", "GOVT 403", "GOVT 404", "HIST 491C", "GOVT 440", "INRL 491", ]}
+            ]},
+            {"type": "choose_n", "n": 2, "groups": [
+                {"type": "any_of", "courses": ["ANTH 350", "ANTH 475", "ANTH 476", "BUAD 417", "ECON 300", "ECON 342", "ECON 382", "ECON 400", "ECON 474", "ECON 483", "GOVT 203", "GOVT 322", "GOVT 324", "GOVT 325", "GOVT 326", "GOVT 327", "GOVT 330", "GOVT 388", "GOVT 391",
+                                               "GOVT 433", "GOVT 482", "HIST 131", "HIST 132", "HIST 142", "HIST 161", "HIST 172", "HIST 181", "HIST 211", "HIST 212", "HIST 223", "HIST 241", "HIST 242", "HIST 243", "HIST 265", "HIST 280", "HIST 284", "HIST 311", "HIST 312",
+                                               "HIST 317", "HIST 319", "HIST 325", "HIST 327", "HIST 334", "HIST 341", "HIST 352", "HIST 353", "HIST 413", "HIST 414", "HIST 490C", "HIST 491C", "INRL 100", "INRL 150", "INRL 390", "INRL 480", "PSYC 470", "SOCL 205", "SOCL 318",
+                                               "SOCL 340", "SOCL 408", "SOCL 427"]}
+                                               
+            ]}
+        ]
+    },
+
+     "kinesiology": {
+        "requirements": [
+            {"type": "all_of", "courses": ["KINE 303", "KINE 304"]},
+            {"type": "choose_n", "n": 1, "groups": [
+                {"type": "any_of", "courses": ["KINE 308", "KINE 394"]},
+                {"type": "any_of", "courses": ["KINE 393", "KINE 401", "KINE 405", "KINE 406", "KINE 455","KINE 493"]}
+            ]},
+            {"type": "choose_n", "n": 8, "groups": [
+                {"type": "any_of", "courses": ["KINE 200", "KINE 270", "KINE 280", "KINE 290", "KINE 295", "KINE 300", "KINE 301", "KINE 303", "KINE 304", "KINE 305", "KINE 308", "KINE 314", "KINE 315", "KINE 320", "KINE 321", "KINE 322", "KINE 340", "KINE 350", "KINE 360",
+                                                "KINE 380", "KINE 393", "KINE 404", "KINE 405", "KINE 422", "KINE 442", "KINE 450", "KINE 455", "KINE 493", "KINE 494"]}
+                                               
+            ]}
+        ]
+    },
+    
+    "data science": {
+        "requirements": [
+            {"type": "all_of", "courses": ["DATA 101", "DATA 201", "DATA 301", "DATA 302", "DATA 303", "MATH 111", "MATH 112", "MATH 211", "MATH 351", "MATH 352"]},
+            {"type": "choose_n", "n": 1, "groups": [
+                {"type": "any_of", "courses": ["DATA 202", "PHIL 215", "PHIL 303", "PHIL 330"]},
+                {"type": "any_of", "courses": ["DATA 420", "DATA 430", "DATA 431", "DATA 440", "DATA 441", "DATA 442", "DATA 444", "DATA 445", "DATA 449"]}
+            ]},
+            {"type": "choose_n", "n": 3, "groups": [
+                {"type": "any_of", "courses": ["DATA 341", "DATA 340", "DATA 441", "DATA 431", "DATA 440", "DATA 442", "DATA 444"]}
+                                               
+            ]}
+        ]
+    } 
 }
 
-
+majors_list =  list(majors_dict.keys())
 os.makedirs("data", exist_ok=True)
-np.save(os.path.join("data", 'majors.npy'), majors)
+np.save(os.path.join("data", 'majors.npy'), majors_dict)
+np.save(os.path.join("data", 'majors_list.npy'), majors_list)
