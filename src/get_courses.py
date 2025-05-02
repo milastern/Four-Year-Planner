@@ -1,23 +1,29 @@
 import random
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 class make_a_schedule: 
     def __init__(self, major1, language, major2 = None, minor = None, study_abroad = False, credits = 0):
         major_filepath = os.path.join("data", "majors.npy")
+        minor_filepath = os.path.join("data", "minors.npy")
         catalog_filepath = os.path.join("data", "course_catalog.npy")
         self.majors = np.load(major_filepath, allow_pickle=True).item()
         self.all_courses = np.load(catalog_filepath, allow_pickle= True)
-        self.minors = { }
+        self.minors = np.load(minor_filepath, allow_pickle=True).item()
         self.major1 = major1
         self.major2 = major2
         self.minor = minor
         self.language = language
         self.study_abroad = study_abroad
         self.credits = credits
+        self.incoming_creds = credits
         self.added_courses = set() #course codes of all courses in schedule 
         self.schedule = [] #list of each course dict
-
+        if self.study_abroad == "I am planning on doing a semester abroad": 
+            self.study_abroad = True
+        elif self.study_abroad == "I am not planning on doing a semester abroad, but I might still study abroad" or self.study_abroad == "I am not planning on studying abroad": 
+            self.study_abroad = False
 
     def clean_course_data (self):
         for i in self.all_courses:
@@ -74,7 +80,7 @@ class make_a_schedule:
         Returns:
             dict or None: The course added, or None if no valid course was found.
         """
-        if not course_list:
+        if not any(course_list):
             return None
 
         attempted = 0
@@ -84,7 +90,7 @@ class make_a_schedule:
             my_course = random.choice(course_list)
             attempted += 1
 
-            if my_course["course_code"] in self.added_courses:
+            if my_course.get("course_code") in self.added_courses:
                 continue
 
             unmet_prereqs = self.get_unmet_prereqs(my_course)
@@ -108,7 +114,7 @@ class make_a_schedule:
                 for course_code in requirement["courses"]:
                     course = next((c for c in self.all_courses if c["course_code"] == course_code), None)
                     if course:
-                        course['tag'] = 'minor requirement'
+                        course['tag'] = 'minor'
                         selected_classes.add(course["course_code"])
                         self.schedule.append(course)
                         self.added_courses.add(course["course_code"])
@@ -151,7 +157,7 @@ class make_a_schedule:
                             self.credits += course.get("credits", 0)
         for i in self.schedule: 
             if i["course_code"] in selected_classes and i["tag"] == "unassigned": 
-                    i["tag"] = "minor elective"
+                    i["tag"] = "minor"
     
 
     def get_major_classes(self, primary=True, seed=None):
@@ -170,7 +176,7 @@ class make_a_schedule:
                 for course_code in requirement["courses"]:
                     course = next((c for c in self.all_courses if c["course_code"] == course_code), None)
                     if course:
-                        course["tag"] = f"major {major_num} requirement"
+                        course["tag"] = f"major {major_num}"
                         selected_classes.add(course["course_code"])
                         self.schedule.append(course)
                         self.added_courses.add(course["course_code"])
@@ -215,7 +221,7 @@ class make_a_schedule:
 
         for i in self.schedule: 
             if i["course_code"] in selected_classes and i["tag"] == "unassigned": 
-                i["tag"] = f"major {major_num} elective"
+                i["tag"] = f"major {major_num}"
                
 
            
@@ -233,25 +239,22 @@ class make_a_schedule:
             self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
 
 
-        #Math & Arts Proficency
+        #Math & Arts proficiency
         if not any("MATH" in course["coll"] for course in self.schedule):
             self.add_course([d for d in self.all_courses if "MATH" in d["coll"]])
         if not any("ARTS" in course["coll"] for course in self.schedule):
             self.add_course([d for d in self.all_courses if "ARTS" in d["coll"]])
         
-        for i in self.schedule: 
-             if i["tag"] == "unassigned": 
-                    i["tag"] = "proficency"
+        
         
         if self.major1 == "kinesiology" or self.major2 == "kinesiology":
             self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
             self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
             self.add_course([d for d in self.all_courses if "NQR" in d["domain"]])
         
-            for i in self.schedule: 
-                if i["tag"] == "unassigned": 
-                        i["tag"] = "B.S. requirement"
-
+        for i in self.schedule: 
+            if i["tag"] == "unassigned": 
+                i["tag"] = "proficiency"
 
         #COLL Classes (400 is in major)        
         self.add_course([d for d in self.all_courses if "COLL 100" in d["coll"]])
@@ -296,11 +299,14 @@ class make_a_schedule:
                 'japanese': ["JAPN 300", "JAPN 301", "JAPN 302", "JAPN 303", "JAPN 305", "JAPN 307"],
                 'russian': ["RUSN 303", "RUSN 304", "RUSN 310", "RUSN 320","RUSN 330", "RUSN 340",  "RUSN 306"],
             } 
-            for lang_code in language_sup.get(self.language, []):
-                lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
-                if lang_course and lang_course["course_code"] not in self.added_courses:
-                    self.schedule.append(lang_course)
-                    self.added_courses.add(lang_course["course_code"])
+            self.add_course(language_sup[self.language])
+            self.add_course(language_sup[self.language])
+
+            # for lang_code in language_sup.get(self.language, []):
+            #     lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
+            #     if lang_course and lang_course["course_code"] not in self.added_courses:
+            #         self.schedule.append(lang_course)
+            #         self.added_courses.add(lang_course["course_code"])
 
 
             
@@ -310,61 +316,213 @@ class make_a_schedule:
 
         return self.schedule
     
-    def add_any_electives(self):
-        self.get_required_classes()
-        self.add_coll_classes
-        credits_in_schedule = self.credits
-        for course in self.schedule:
-            credits_in_schedule += course["credits"]
-        
-    def compile(self): 
-        print("Primary Major Courses:")
-        for i in self.schedule: 
-            print(i["course_code"], i["credits"], i["tag"])
-        print(f"Your Schedule has {self.credits} credits")
+    def add_abroad(self): 
+        if self.study_abroad: 
+            sem_abroad = [{"course_code": "ABROAD", 'credits': 15, 'prereqs': [], 'coreqs': [] , 'coll': ['COLL 300'], 'domain': [], 'tag': 'abroad'}]
+            self.add_course(sem_abroad)
         return
-        
-one = make_a_schedule("economics", "french", "government")
-clean = one.clean_course_data()
-then = one.get_major_classes()
-ok = one.get_major_classes(primary= False)
-so = one.add_coll_classes()
-one.compile()
-
-
-# subset_with_prereqs = [
-#     d for d in all_courses
-#     if isinstance(d.get('prereqs'), list) and len(d.get('prereqs', [])) >= 1
-# ]
-# print(len(subset_with_prereqs))
+    
+    def add_any_electives(self):
+        credits_needed = 120 - self.credits
+        while not credits_needed <= 0: 
+            self.add_course(self.all_courses)
+            credits_needed = 120 - self.credits
+        for i in self.schedule: 
+            if i["tag"] == "unassigned": 
+                i["tag"] = "elective"
+        return
+            
+    def get_credits(self):
+        return (self.credits - self.incoming_creds)
+            
+    def compile(self): 
+        self.clean_course_data()
+        self.get_major_classes()
+        if self.major2: 
+            self.get_major_classes(primary = False)
+        elif self.minor:
+           self.get_minor_courses()
+        self.add_coll_classes()
+        self.add_abroad()
+        self.add_any_electives()
+        for k in self.schedule: 
+            k["status"] = False
+        return self.schedule
     
 
-#   for i in major1: 
-#         major_courses = [d for d in all_courses if d["course_code"] == i]
+    # def add_course_to_product(self, course, semester_idx):
+    #     semester = self.semester_keys[semester_idx]
+    #     if course["prereqs"]: 
+    #         for prereq in course["prereqs"]:
+    #             if prereq["status"] == False: 
+    #                 self.add_course_to_product(prereq, semester_idx) #AHHHHHH RECURSION
+    #     else:  
+    #         course["status"] = True
+    #         self.schedule.remove(course)
+    #         self.product[semester].append(course) 
+    #         return 
 
-#     if major2 is not None: 
-#         for j in major2: 
-#             maj2_corses = [d for d in all_courses if d["course_code"] == j]
-#             major_courses.extend(maj2_corses)
-#     elif minor is not None: 
-#         for k in minor:
-#             minor_courses = [d for d in all_courses if d["course_code"] == k]
-#             coll_schedule.extend(minor_courses)
+
+    def make_schedule(self):
+        self.product = {    
+            'Year 1 Fall Semester': [],
+            'Year 1 Spring Semester': [],
+            'Year 2 Fall Semester': [],
+            'Year 2 Spring Semester': [],
+            'Year 3 Fall Semester': [], 
+            'Year 3 Spring Semester': [],
+            'Year 4 Fall Semester': [],
+            'Year 4 Spring Semester': []
+        }
+        self.compile()
+        if (self.credits - self.incoming_creds) <= 105: 
+            del self.product['Year 4 Spring Semester'] #graduate a semester early 
+
+        if (self.credits - self.incoming_creds) <= 90: 
+            del self.product['Year 4 Fall Semester']
+        
+        self.semester_keys = list(self.product.keys())
+        coll_100 = next((c for c in self.schedule if 'COLL 100' in c.get("coll")), None)
+        coll_150 = next((c for c in self.schedule if 'COLL 150' in c.get("coll")), None)
+        self.schedule = [ {**d, "status": True} if d["course_code"] == coll_100["course_code"] else d for d in self.schedule]
+        self.product["Year 1 Fall Semester"].append(coll_100)
+        self.schedule = [ {**d, "status": True} if d["course_code"] == coll_150["course_code"] else d for d in self.schedule]
+        self.product["Year 1 Spring Semester"].append(coll_150)
+        if self.language != "N/A":
+            lang1 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
+            self.product["Year 1 Fall Semester"].append(lang1)
+            self.schedule = [ {**d, "status": True} if d["course_code"] == lang1["course_code"] else d for d in self.schedule]
+            lang2 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
+            self.product["Year 1 Spring Semester"].append(lang2)
+            self.schedule = [ {**d, "status": True} if d["course_code"] == lang2["course_code"] else d for d in self.schedule]
+            lang3 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
+            self.product["Year 2 Fall Semester"].append(lang3)
+            self.schedule = [ {**d, "status": True} if d["course_code"] == lang3["course_code"] else d for d in self.schedule]
+            lang4 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
+            self.product["Year 2 Spring Semester"].append(lang4)
+            self.schedule = [ {**d, "status": True} if d["course_code"] == lang4["course_code"] else d for d in self.schedule]
+            if self.major1 == "international relations" or self.major2 == "international relations":
+                lang5 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
+                self.product["Year 3 Fall Semester"].append(lang5)
+                self.schedule = [ {**d, "status": True} if d["course_code"] == lang5["course_code"] else d for d in self.schedule]
+                if not self.study_abroad:
+                    lang6 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
+                    self.product["Year 3 Spring Semester"].append(lang6)
+                    self.schedule = [ {**d, "status": True} if d["course_code"] == lang6["course_code"] else d for d in self.schedule]
+                else: 
+                    lang6 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
+                    self.product["Year 4 Fall Semester"].append(lang6)
+                    self.schedule = [ {**d, "status": True} if d["course_code"] == lang6["course_code"] else d for d in self.schedule]
+        if self.study_abroad: 
+                abroad_class = next((c for c in self.schedule if c.get("tag") == 'abroad'), None)
+                self.schedule = [ {**d, "status": True} if d["course_code"] == abroad_class["course_code"] else d for d in self.schedule]
+                self.product["Year 3 Spring Semester"].append(abroad_class)
+        
+        semester_idx = 0
+        semester = self.semester_keys[semester_idx]
+        max_loops = 1000
+        loops = 0 
+        while not all(d["status"] for d in self.schedule) and loops < max_loops:
+            loops += 1
+            try:  
+                for i in self.schedule: 
+                    if i.get("status"):
+                        continue  # already scheduled
+                    
+                    credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester, []))
+                    if (credits_in_semester + i.get("credits")) > 15:
+                        semester_idx = (semester_idx + 1) % len(self.semester_keys)
+                        semester = self.semester_keys[semester_idx]
+
+                    
+        
+                    
+                    if i["prereqs"]: 
+                        for prereq in i["prereqs"]:
+                            if prereq["status"] == False: 
+                                continue
+                            done = 0
+                    for sem in range(0,semester_idx):
+                        if prereq in self.product[self.semester_keys[sem]]:
+                            done += 1
+                    if done != 1: 
+                        continue
+
+                    i["status"] = True
+                    self.product[semester].append(i)
+            except Exception as e:
+                print(f"Error during scheduling: {e}")
+                break
+ 
+        return self.product
+    
+    def make_chart(self): 
+        self.make_schedule()
+        tag_colors = {
+                'minor': 'lightgreen',
+                'major1': 'skyblue',
+                'major2': 'lavender',
+                'coll': 'khaki',
+                'lang': 'lightcoral',
+                'elective': 'goldenrod',
+                'abroad': 'lightgray',
+                'proficiency': 'softpink'
+
+            }
+        fig, ax = plt.subplots(figsize=(12, 6))
+        semesters = list(self.product.keys())
+        row_gap = 1.5
+
+        for row, semester in enumerate(semesters):
+            y = -(row * row_gap)
+            courses = self.product[semester]
+            for col, course in enumerate(courses):
+                tag = course["tag"]
+                color = tag_colors.get(tag, "lightgray")
+                # Draw rectangle with border
+                rect = plt.Rectangle((col, y - 1), 1, 1, facecolor=color, edgecolor="black", linewidth=1.5)
+                ax.add_patch(rect)
+                # Add course code label inside block
+                ax.text(col + 0.5, y - 0.5, course["course_code"], ha='center', va='center', fontsize=10)
+            
+            # Add semester label above the row
+            mid_col = (len(courses) - 1) / 2
+            ax.text(mid_col + 0.5, y + 0.1, semester, ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+        max_cols = max(len(courses) for courses in self.product.values())
+        ax.set_xlim(0, max_cols)
+        ax.set_ylim(-len(semesters), 1)
+        ax.axis("off")
+        ax.set_title("Customized Course Schedule by Semester", fontsize=14)
+        plt.tight_layout()
+        plt.show()
 
 
-# my_list = get_required_classes("computer science")
-# for i in my_list:
-#    eek = [d for d in all_courses if d["course_code"] == i]
-#    if len(eek) == 0:
-#        print(f"course: {i} not found")
-#    else:
-#        print(eek)
+# hola = make_a_schedule('economics', 'french', minor= 'data science', study_abroad= True, credits = 15)
+# trying = hola.make_schedule() 
+# print("1 Fall: ") 
+# for i in trying['Year 1 Fall Semester']: 
+#     print(i)
+# print("1 spring: ") 
+# for i in trying['Year 1 Spring Semester']: 
+#     print(i)
+# print("2 Fall: ") 
+# for i in trying['Year 2 Fall Semester']: 
+#     print(i)
+# print("2 spring: ") 
+# for i in trying['Year 2 Spring Semester']: 
+#     print(i)
+# print("3 Fall: ") 
+# for i in trying['Year 3 Fall Semester']: 
+#     print(i)
+# print("3 spring: ") 
+# for i in trying['Year 3 Spring Semester']: 
+#     print(i)
+# print("4 Fall: ") 
+# for i in trying['Year 4 Fall Semester']: 
+#     print(i)
+# print("4 Spring: ") 
+# for i in trying['Year 4 Spring Semester']: 
+#     print(i)
 
-# here = get_classes(major1=my_list)
-# for item in here:
-#     if isinstance(item, list):
-#         print(item[0]['course_code'])
 
-# clean_cc = clean_course_data()
-# bio = next((c for c in all_courses if c.get("course_code") == "ECON 307"), None)
-# print(bio)

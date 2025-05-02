@@ -1,15 +1,19 @@
 import dash
 from dash import dcc, html, Input, Output, callback_context as ctx
 import pandas as pd
+import numpy as np
+import os
 import plotly.express as px
+from get_courses import make_a_schedule
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
-# Sample dropdown options
-all_majors = ["psychology", "biology", "government"]
-minors = ["data science", "psychology", "mathematics"]
-langs = ["N/A", "spanish", "french"]  # Replace None with a readable option
-ops = ["I am planning on studying abroad", "I am not planning on studying abroad"]
+major_filepath = os.path.join("data", "majors_list.npy")
+all_majors = np.load(major_filepath, allow_pickle=True).tolist()
+minor_filepath = os.path.join("data", "minors_list.npy")
+minors = np.load(minor_filepath, allow_pickle=True).tolist()
+langs = ['N/A','spanish', 'french', 'arabic', 'chinese', 'italian', 'german', 'japanese', 'russian']
+ops = ["I am planning on doing a semester abroad", "I am not planning on doing a semester abroad, but I might still study abroad", "I am not planning on studying abroad"]
 
 # Layout of the app
 app.layout = html.Div([
@@ -65,7 +69,7 @@ app.layout = html.Div([
 
     # Study abroad preference dropdown
     html.Div([
-        html.Label("Study Abroad Preference:"),
+        html.Label("Semester Abroad Preference:"),
         dcc.Dropdown(
             id='dd_abroad',
             options=[{'label': opt, 'value': opt} for opt in ops],
@@ -148,25 +152,41 @@ def handle_submission(primary_major, lang, abroad, secondary_major, minor, credi
         # Validate required inputs
         if not primary_major:
             return "Please select a primary major."
-        if credits is None:
-            return "Please enter the number of credits you came in with."
+        if lang is None:
+            return "Please enter the language you wish to take or indicate that this requirement is not applicable."
 
         # Build output messages
-        output = [f"You entered {credits} credits and selected {primary_major} as your primary major."]
-        if degree_type == 'double' and secondary_major:
-            output.append(f"You chose to double major with {secondary_major}.")
-        elif degree_type == 'major-minor':
-            if minor:
-                output.append(f"You also chose {minor} as your minor.")
-        elif degree_type == 'single':
-            output.append("You opted for a single major.")
+        output = []
+        if degree_type == "double": 
+            do_it = make_a_schedule(primary_major,lang, secondary_major, study_abroad= abroad, credits = credits)
+            schedule = do_it.compile()
+            creds = do_it.get_credits()
+            output.append(f"Schedule has {creds} credits in it")
+            output.append("Courses to take: ")
+            for i in schedule: 
+                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
 
-        # Include language and study abroad preferences
-        output.append(f"Language preference: {lang}.")
-        output.append(f"Study abroad preference: {abroad}.")
+        elif degree_type =='major-minor':
+            do_it = make_a_schedule(primary_major,lang, minor= minor, study_abroad= abroad, credits = credits)
+            schedule = do_it.compile()
+            creds = do_it.get_credits()
+            output.append(f"Schedule has {creds} credits in it")
+            output.append("Courses to take: ")
+            for i in schedule: 
+                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
+
+        else: 
+            do_it = make_a_schedule(primary_major,lang, study_abroad= abroad, credits = credits)
+            schedule = do_it.compile()
+            creds = do_it.get_credits()
+            output.append(f"Schedule has {creds} credits in it")
+            output.append("Courses to take: ")
+            for i in schedule: 
+                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
 
         # Return final output
         return html.Div([html.P(line) for line in output])
+        return [html.P(item) for item in output]
 
     return ""
 
