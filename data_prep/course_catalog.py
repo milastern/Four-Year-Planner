@@ -84,6 +84,32 @@ for i in links:
                     for a_tag in prerequisite_element.find_all_next('a'):
                         prerequisites.append(a_tag.text.strip())
 
+                if prerequisite_element:
+                    logic_keywords = []
+                    # Go up to the parent (em tag) and then find all following siblings that are either <a> tags or strings
+                    for sibling in prerequisite_element.find_next_siblings():
+                        if isinstance(sibling, str):
+                            cleaned_text = sibling.strip().lower()
+                            if cleaned_text == 'or':
+                                logic_keywords.append('or')
+                            elif cleaned_text == 'and':
+                                logic_keywords.append('and')
+                        elif sibling.name == 'a':
+                            pass # Ignore the prerequisite course links themselves
+
+                    if 'and' in logic_keywords and 'or' in logic_keywords:
+                        prereq_logic =  'mixed'
+                    elif 'and' in logic_keywords:
+                        prereq_logic = 'and'
+                    elif 'or' in logic_keywords:
+                        prereq_logic = 'or'
+                    else:
+                        prereq_logic = None  # Or potentially 'single' if there's one prereq without logic
+
+                else:
+                    prereq_logic = None # No prerequisite section found
+
+
                 if prereq_coreq_element:
                     for a_tag in prereq_coreq_element.find_all_next('a'):
                         prerequisites.append(a_tag.text.strip())
@@ -123,6 +149,7 @@ for i in links:
                     "course_code": course_code,
                     "credits": credits,
                     "prereqs": prerequisites,
+                    "logic" : prereq_logic,
                     "coreqs": coreqs,
                     "coll": coll,
                     "domain": domains,

@@ -2,6 +2,7 @@ import random
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import traceback
 
 class make_a_schedule: 
     def __init__(self, major1, language, major2 = None, minor = None, study_abroad = False, credits = 0):
@@ -29,7 +30,7 @@ class make_a_schedule:
         for i in self.all_courses:
             i["tag"] = "unassigned"
             if i["credits"] is None: 
-                i["credits"] = 0
+                i["credits"] = 3
             real_prereqs = []
             coreqs = []
             if isinstance(i["prereqs"], list):
@@ -420,7 +421,7 @@ class make_a_schedule:
         
         semester_idx = 0
         semester = self.semester_keys[semester_idx]
-        max_loops = 1000
+        max_loops = 10000
         loops = 0 
         while not all(d["status"] for d in self.schedule) and loops < max_loops:
             loops += 1
@@ -429,31 +430,70 @@ class make_a_schedule:
                     if i.get("status"):
                         continue  # already scheduled
                     
-                    credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester, []))
-                    if (credits_in_semester + i.get("credits")) > 15:
-                        semester_idx = (semester_idx + 1) % len(self.semester_keys)
-                        semester = self.semester_keys[semester_idx]
-
+                    found_place = False
+                    end = 0 
+                    while not found_place and end < 32:
+                        end += 1
+                        credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester))
+                        if (credits_in_semester + i.get("credits")) > 15:
+                            semester_idx = (semester_idx + 1) % len(self.semester_keys)
+                            semester = self.semester_keys[semester_idx]
+                        elif (credits_in_semester + i.get("credits")) <= 18 and end > 8: 
+                            found_place = True
+                        else: 
+                            found_place = True
+                    # if end == 32: 
+                        # raise ValueError(f"Course: {i.get('course_code')} could not be placed")
                     
-        
-                    
-                    if i["prereqs"]: 
-                        for prereq in i["prereqs"]:
-                            if prereq["status"] == False: 
-                                continue
-                            done = 0
-                    for sem in range(0,semester_idx):
-                        if prereq in self.product[self.semester_keys[sem]]:
-                            done += 1
-                    if done != 1: 
-                        continue
+                    if i.get("prereqs"): 
+                        placed = 0 
+                        for prereq in i.get("prereqs"): 
+                            done = 0  
+                            pre_in_schedule = next((c for c in self.schedule if prereq in c.get("course_code")), None)
+                            
+                            # print(pre_in_schedule.get("course_code"))
+                            if i.get("logic") == 'or' and placed > 0:
+                                done += 1
+                                break
+                            elif not pre_in_schedule: 
+                                print(i)
+                                raise TypeError(f"Error with course {prereq} as a prereq for {i.get('course_code')}")
+                            if pre_in_schedule.get("status") == False:
+                                if i.get("logic") == 'or' and placed > 0:
+                                    done += 1
+                                    break
+                                else: 
+                                    break
+                            
+                            for sem in range(0,semester_idx+1):
+                                if pre_in_schedule in self.product[self.semester_keys[sem]]:
+                                    if pre_in_schedule in self.product[self.semester_keys[semester_idx]]:
+                                        semester_idx = (semester_idx + 1) % len(self.semester_keys)
+                                        semester = self.semester_keys[semester_idx]
+                                        credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester))
+                                        if (credits_in_semester + pre_in_schedule.get("credits")) <= 18:
+                                            done += 1
+                                            placed += 1
+                                        else:
+                                            break
+                                    else:     
+                                        done += 1
+                                        placed += 1
+                        if done != 1: 
+                            continue
 
                     i["status"] = True
                     self.product[semester].append(i)
+                    # print(f"Course: {i.get('course_code')} scheduled!")
             except Exception as e:
                 print(f"Error during scheduling: {e}")
+                traceback.print_exc()
                 break
- 
+        print("unplaced courses: ")
+        for i in self.schedule: 
+            if not i.get("status"):
+                print(i.get('course_code'), i.get("credits"))
+                
         return self.product
     
     def make_chart(self): 
@@ -498,31 +538,33 @@ class make_a_schedule:
         plt.show()
 
 
-# hola = make_a_schedule('economics', 'french', minor= 'data science', study_abroad= True, credits = 15)
-# trying = hola.make_schedule() 
-# print("1 Fall: ") 
-# for i in trying['Year 1 Fall Semester']: 
-#     print(i)
-# print("1 spring: ") 
-# for i in trying['Year 1 Spring Semester']: 
-#     print(i)
-# print("2 Fall: ") 
-# for i in trying['Year 2 Fall Semester']: 
-#     print(i)
-# print("2 spring: ") 
-# for i in trying['Year 2 Spring Semester']: 
-#     print(i)
-# print("3 Fall: ") 
-# for i in trying['Year 3 Fall Semester']: 
-#     print(i)
-# print("3 spring: ") 
-# for i in trying['Year 3 Spring Semester']: 
-#     print(i)
-# print("4 Fall: ") 
-# for i in trying['Year 4 Fall Semester']: 
-#     print(i)
-# print("4 Spring: ") 
-# for i in trying['Year 4 Spring Semester']: 
-#     print(i)
+hola = make_a_schedule('economics', 'french', minor = 'psychology', study_abroad= True, credits = 15)
+trying = hola.make_schedule() 
+
+print("1 Fall: ") 
+for i in trying['Year 1 Fall Semester']: 
+    print(i.get("course_code"), i.get("credits"))
+print("1 spring: ") 
+for i in trying['Year 1 Spring Semester']: 
+   print(i.get("course_code"), i.get("credits"))
+print("2 Fall: ") 
+for i in trying['Year 2 Fall Semester']: 
+   print(i.get("course_code"), i.get("credits"))
+print("2 spring: ") 
+for i in trying['Year 2 Spring Semester']: 
+    print(i.get("course_code"), i.get("credits"))
+print("3 Fall: ") 
+for i in trying['Year 3 Fall Semester']: 
+   print(i.get("course_code"), i.get("credits"))
+print("3 spring: ") 
+for i in trying['Year 3 Spring Semester']: 
+   print(i.get("course_code"), i.get("credits"))
+print("4 Fall: ") 
+for i in trying['Year 4 Fall Semester']: 
+    print(i.get("course_code"), i.get("credits"))
+if 'Year 4 Spring Semester' in trying:
+    print("4 Spring: ") 
+    for i in trying['Year 4 Spring Semester']: 
+       print(i.get("course_code"), i.get("credits"))
 
 
