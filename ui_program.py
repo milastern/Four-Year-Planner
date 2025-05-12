@@ -1,6 +1,5 @@
 import dash
 from dash import dcc, html, Input, Output, callback_context as ctx
-import pandas as pd
 import numpy as np
 import os
 import plotly.express as px

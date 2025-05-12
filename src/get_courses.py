@@ -8,8 +8,7 @@ matplotlib.use('Agg')
 import traceback
 from collections import defaultdict, deque
 import logging
-import io
-import base64
+
 
 
 class make_a_schedule: 
