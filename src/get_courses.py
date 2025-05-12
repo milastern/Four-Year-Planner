@@ -303,10 +303,7 @@ class make_a_schedule:
             if i["course_code"] in selected_classes and i["tag"] == "unassigned": 
                 i["tag"] = f"major {major_num}"
         return 
-               
-
-           
-
+                        
     def add_coll_classes(self, 
                          seed: int = None) -> None: 
         """
