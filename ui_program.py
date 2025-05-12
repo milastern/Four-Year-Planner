@@ -4,7 +4,12 @@ import pandas as pd
 import numpy as np
 import os
 import plotly.express as px
-from get_courses import make_a_schedule
+from src.get_courses import make_a_schedule
+import matplotlib.pyplot as plt
+import io
+import base64 
+from IPython.display import Image
+
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
@@ -159,34 +164,29 @@ def handle_submission(primary_major, lang, abroad, secondary_major, minor, credi
         output = []
         if degree_type == "double": 
             do_it = make_a_schedule(primary_major,lang, secondary_major, study_abroad= abroad, credits = credits)
-            schedule = do_it.compile()
-            creds = do_it.get_credits()
-            output.append(f"Schedule has {creds} credits in it")
-            output.append("Courses to take: ")
-            for i in schedule: 
-                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
 
         elif degree_type =='major-minor':
-            do_it = make_a_schedule(primary_major,lang, minor= minor, study_abroad= abroad, credits = credits)
-            schedule = do_it.compile()
-            creds = do_it.get_credits()
-            output.append(f"Schedule has {creds} credits in it")
-            output.append("Courses to take: ")
-            for i in schedule: 
-                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
+            do_it = make_a_schedule(primary_major,lang, minor= minor, study_abroad= abroad, credits = credits)   
 
         else: 
             do_it = make_a_schedule(primary_major,lang, study_abroad= abroad, credits = credits)
-            schedule = do_it.compile()
-            creds = do_it.get_credits()
-            output.append(f"Schedule has {creds} credits in it")
-            output.append("Courses to take: ")
-            for i in schedule: 
-                output.append(f"course: {i['course_code']}; credits: {i['credits']}; tag: {i['tag']}")
+        
+        buf = io.BytesIO()
+        do_it.make_chart(output=buf)  # Modify make_chart to accept a buffer instead of saving to file
+        buf.seek(0)
+        encoded_image = base64.b64encode(buf.read()).decode('utf-8')
+        src = f'data:image/png;base64,{encoded_image}'
 
-        # Return final output
-        return html.Div([html.P(line) for line in output])
-        return [html.P(item) for item in output]
+        return html.Div([
+            html.H1("Course Schedule"),
+            html.Img(src=src, style={'width': '60%', 'height': 'auto'})
+        ])
+       
+
+        # return html.Div([
+        #     html.H1("Course Schedule"),
+        #     html.Img(src=src, style={'width': '60%', 'height': 'auto'})
+        # ])
 
     return ""
 

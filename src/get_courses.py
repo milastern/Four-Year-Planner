@@ -1,9 +1,15 @@
 import random
 import numpy as np
 import os
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+matplotlib.use('Agg') 
 import traceback
-from collections import defaultdict
+from collections import defaultdict, deque
+import logging
+import io
+import base64
 
 
 class make_a_schedule: 
@@ -27,6 +33,7 @@ class make_a_schedule:
             self.study_abroad = True
         elif self.study_abroad == "I am not planning on doing a semester abroad, but I might still study abroad" or self.study_abroad == "I am not planning on studying abroad": 
             self.study_abroad = False
+        self.attempts = 0 
 
     def clean_course_data (self):
         for i in self.all_courses:
@@ -61,6 +68,8 @@ class make_a_schedule:
                 i["prereqs"] = ["CHIN 301"]
             if i['course_code'] == 'ITAL 206' or i['course_code'] == 'ITAL 208':
                 i["prereqs"] = ["ITAL 202"]
+            if i['course_code'] == 'JAPN 303':
+                 i["prereqs"] = ["JAPN 302"]
         return self.all_courses
 
     def get_unmet_prereqs(self, course):
@@ -112,6 +121,7 @@ class make_a_schedule:
                 self.credits += my_course.get("credits", 0)
                 return my_course
         print("couldnt add course")
+        logging.warning(traceback.format_exc())  # Log the traceback
         return None
 
     def get_minor_courses(self, seed = None): 
@@ -407,36 +417,67 @@ class make_a_schedule:
         return self.schedule
     
 
-    def sort_schedule(self): 
+    def sort_schedule(self):
         self.compile()
-        prereq_map = defaultdict(set)
-        is_prereq = set()
-        has_prereqs = set()
 
+        prereq_map = defaultdict(set)  # Tracks prerequisite relationships
+        in_degree = defaultdict(int)     # Tracks the number of prerequisites for each course
+        course_map = {course["course_code"]: course for course in self.schedule}
+
+        # Step 1: Build dependency mappings and in-degrees
         for course in self.schedule:
             code = course["course_code"]
             for prereq in course.get("prereqs", []):
                 prereq_map[prereq].add(code)
-                is_prereq.add(prereq)
-                has_prereqs.add(code)
+                in_degree[code] += 1
 
-        def get_sort_key(course):
+        # Step 2: Topological Sort
+        sorted_courses_topological = []
+        queue = deque([code for code in course_map if in_degree[code] == 0])  # Start with courses with no prerequisites
+
+        while queue:
+            code = queue.popleft()
+            sorted_courses_topological.append(course_map[code])
+
+            for dependent in prereq_map.get(code, []):
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(dependent)
+
+        # Check for cycles (if the length doesn't match, there's a dependency cycle)
+        if len(sorted_courses_topological) != len(self.schedule):
+            self.schedule = [] 
+            self.attempts += 1
+            if self.attempts > 4: 
+                raise ValueError("Circular dependency detected in the schedule.")
+            self.sort_schedule()
+
+        # Step 3: Assign hierarchical tiers
+        is_prereq = set()
+        has_prereqs = set()
+        for course in self.schedule:
             code = course["course_code"]
-            # Priority: 0 = only prereq, 1 = both, 2 = only has prereqs, 3 = neither
+            if code in prereq_map:
+                is_prereq.add(code)
+            for prereq in course.get("prereqs", []):
+                has_prereqs.add(code)
+                break # Optimization: once a prereq is found, it has prereqs
+
+        def get_tier(code):
             if code in is_prereq and code in has_prereqs:
-                tier = 1
+                return 1  # Both are prerequisites & have prerequisites
             elif code in is_prereq:
-                tier = 0
+                return 0  # Only a prerequisite
             elif code in has_prereqs:
-                tier = 2
+                return 2  # Only has prerequisites
             else:
-                tier = 3
-            return (tier, -len(prereq_map.get(code, [])))
+                return 3  # Elective (neither)
 
-        self.schedule = sorted(self.schedule, key=get_sort_key)
+        # Step 4: Sort the topologically sorted courses by tier
+        sorted_schedule = sorted(sorted_courses_topological, key=lambda course: get_tier(course["course_code"]))
+
+        self.schedule = list(sorted_schedule) # Ensure self.schedule is updated
         return self.schedule
-    
-
 
     def make_schedule(self):
         self.product = {    
@@ -449,7 +490,9 @@ class make_a_schedule:
             'Year 4 Fall Semester': [],
             'Year 4 Spring Semester': []
         }
-        self.sort_schedule()
+        self.times = 0 
+        if self.times < 1:
+            self.sort_schedule()
         # if (self.credits - self.incoming_creds) <= 110: 
         #     del self.product['Year 4 Spring Semester'] #graduate a semester early 
 
@@ -496,6 +539,9 @@ class make_a_schedule:
                     # Try two passes: first for ≤15 credits, then for ≤18
                     for credit_limit in [15, 18]:
                         for semester_idx, semester in enumerate(self.semester_keys):
+                            if self.study_abroad:
+                                if semester_idx == 5: 
+                                    continue
                             # Check prereqs are met in earlier semesters
                             prereqs = course.get("prereqs", [])
                             logic = course.get("logic", "and")
@@ -545,29 +591,41 @@ class make_a_schedule:
                 print(f"Error during scheduling: {e}")
                 traceback.print_exc()
                 break
-        print("unplaced courses: ")
-        for i in self.schedule: 
-            if not i.get("status"):
-                print(i.get('course_code'), i.get("credits"), i.get('logic'), i.get('prereqs'))
+        # if not all(c for c in self.schedule if c.get('status')):
+        #     self.times += 1 
+        #     if self.times > 5:
+        #            return
+        #     for i in self.schedule: 
+        #         if not i.get("status"):
+        #             print(i.get("course_code"), i.get('prereqs'))
+        #         #make it do the function again! (but not compile?)
+        #         if i.get('status'):
+        #             i['status'] = False
+        #     self.make_schedule()
                 
         return self.product
     
-    def make_chart(self): 
+    def make_chart(self, output=None): 
         self.make_schedule()
-        tag_colors = {
-                'minor': 'lightgreen',
-                'major1': 'skyblue',
-                'major2': 'lavender',
-                'coll': 'khaki',
-                'lang': 'lightcoral',
-                'elective': 'goldenrod',
-                'abroad': 'lightgray',
-                'proficiency': 'softpink'
+        used_tags = set(course["tag"] for semester in self.product.values() for course in semester)
 
-            }
+        tag_colors = {
+                    'minor': '#90EE90',       # lightgreen
+                    'major 1': '#87CEEB',      # skyblue
+                    'major 2': '#D8BFD8',      # thistle (better than lavender)
+                    'coll': '#F0E68C',        # khaki
+                    'lang': '#F08080',        # lightcoral
+                    'elective': '#FFDAB9',    # peachpuff
+                    'abroad': '#D3D3D3',      # lightgray
+                    'proficiency': '#FFB6C1'  # lightpink
+                }
+        legend_elements = [
+                            mpatches.Patch(color=tag_colors[tag], label=tag.capitalize())
+                            for tag in used_tags
+                        ]
         fig, ax = plt.subplots(figsize=(12, 6))
         semesters = list(self.product.keys())
-        row_gap = 1.5
+        row_gap = 2
 
         for row, semester in enumerate(semesters):
             y = -(row * row_gap)
@@ -582,64 +640,42 @@ class make_a_schedule:
                 ax.text(col + 0.5, y - 0.5, course["course_code"], ha='center', va='center', fontsize=10)
             
             # Add semester label above the row
-            mid_col = (len(courses) - 1) / 2
-            ax.text(mid_col + 0.5, y + 0.1, semester, ha='center', va='bottom', fontsize=12, fontweight='bold')
+            # mid_col = (len(courses) - 1) / 2
+            ax.text(-0.4, y + 0.2, semester, ha='left', va='bottom', fontsize=12, fontweight='bold')
 
         max_cols = max(len(courses) for courses in self.product.values())
         ax.set_xlim(0, max_cols)
-        ax.set_ylim(-len(semesters), 1)
+        ax.set_ylim(-len(semesters) * row_gap, 1)
         ax.axis("off")
         ax.set_title("Customized Course Schedule by Semester", fontsize=14)
+        ax.legend(handles=legend_elements, title="Course Categories", loc="upper right", bbox_to_anchor=(1.15, 1))
         plt.tight_layout()
-        plt.show()
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = os.path.join(base_dir, "assets")
+        os.makedirs(output_dir, exist_ok=True)
+        filepath = os.path.join(output_dir, "schedule.png")
+        if output:
+            fig.savefig(output, format='png')  # or plt.savefig(output)
+        else:
+            fig.savefig(filepath)
+            plt.close(fig)
+            return 
 
 
 
-major_filepath = os.path.join("data", "majors_list.npy")
-all_majors = np.load(major_filepath, allow_pickle=True).tolist()
-minor_filepath = os.path.join("data", "minors_list.npy")
-minors = np.load(minor_filepath, allow_pickle=True).tolist()
-
-# hola = make_a_schedule('international relations', 'german', study_abroad= False, credits = 15)
-# trying = hola.sort_schedule() 
-# for i in trying: 
-#     print(i.get("course_code"), i.get("credits"), i.get("tag"))
-
-langs = ['spanish', 'french', 'arabic', 'chinese', 'italian', 'german', 'japanese', 'russian']
-for i in langs: 
-    hola = make_a_schedule('international relations', i, study_abroad= False, credits = 15)
-    print(f"Schedule for {i}")
-    trying = hola.make_schedule() 
-# for j in minors: 
-#     hola = make_a_schedule('government', 'french', minor = j, study_abroad= False, credits = 15)
-#     print(f"Schedule for {j}")
-#     trying = hola.make_schedule() 
+# def fig_to_base64(fig):
+#     buf = io.BytesIO()
+#     fig.savefig(buf, format='png')
+#     buf.seek(0)
+#     encoded = base64.b64encode(buf.read()).decode('utf-8')
+#     buf.close()
+#     plt.close(fig)
+#     return f"data:image/png;base64,{encoded}"
 
 
-# print("1 Fall: ") 
-# for i in trying['Year 1 Fall Semester']: 
-#     print(i.get("course_code"), i.get("credits"))
-# print("1 spring: ") 
-# for i in trying['Year 1 Spring Semester']: 
-#    print(i.get("course_code"), i.get("credits"))
-# print("2 Fall: ") 
-# for i in trying['Year 2 Fall Semester']: 
-#    print(i.get("course_code"), i.get("credits"))
-# print("2 spring: ") 
-# for i in trying['Year 2 Spring Semester']: 
-#     print(i.get("course_code"), i.get("credits"))
-# print("3 Fall: ") 
-# for i in trying['Year 3 Fall Semester']: 
-#    print(i.get("course_code"), i.get("credits"))
-# print("3 spring: ") 
-# for i in trying['Year 3 Spring Semester']: 
-#    print(i.get("course_code"), i.get("credits"))
-# print("4 Fall: ") 
-# for i in trying['Year 4 Fall Semester']: 
-#     print(i.get("course_code"), i.get("credits"))
-# if 'Year 4 Spring Semester' in trying:
-#     print("4 Spring: ") 
-#     for i in trying['Year 4 Spring Semester']: 
-#        print(i.get("course_code"), i.get("credits"))
 
 
+# omg = make_a_schedule('economics', 'N/A', credits= 12)
+# trying = omg.make_chart()
+# # for i in trying: 
+#     print(i.get('course_code'))
