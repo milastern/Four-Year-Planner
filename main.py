@@ -1,6 +1,4 @@
-def main():
-    print("Hello from four-year-planner!")
-
+from src import ui_program
 
 if __name__ == "__main__":
-    main()
+     ui_program.app.run(debug=True)
