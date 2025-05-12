@@ -3,6 +3,8 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import traceback
+from collections import defaultdict
+
 
 class make_a_schedule: 
     def __init__(self, major1, language, major2 = None, minor = None, study_abroad = False, credits = 0):
@@ -51,6 +53,14 @@ class make_a_schedule:
                     i['coll'] = [i["coll"]]
             elif i['coll'] is None: 
                 i['coll'] = []
+            if i['course_code'] == "HISP 206" or i['course_code'] == "HISP 207":
+                i["prereqs"] = ["HISP 202"]
+            if i['course_code'] == "CHIN 301":
+                i["prereqs"] = ["CHIN 202"]
+            if i['course_code'] == "CHIN 302": 
+                i["prereqs"] = ["CHIN 301"]
+            if i['course_code'] == 'ITAL 206' or i['course_code'] == 'ITAL 208':
+                i["prereqs"] = ["ITAL 202"]
         return self.all_courses
 
     def get_unmet_prereqs(self, course):
@@ -90,7 +100,7 @@ class make_a_schedule:
         while attempted < max_attempts:
             my_course = random.choice(course_list)
             attempted += 1
-
+            
             if my_course.get("course_code") in self.added_courses:
                 continue
 
@@ -145,8 +155,8 @@ class make_a_schedule:
                             unmet_dicts = [
                                 c for c in self.all_courses if c["course_code"] in unmet
                             ]
-                            selected_classes.update(unmet_dicts)
-                            self.added_courses.update(unmet_dicts)
+                            selected_classes.update(c["course_code"] for c in unmet_dicts)
+                            self.added_courses.update(c["course_code"] for c in unmet_dicts)
                             for prereq in unmet_dicts: 
                                 self.credits += prereq.get("credits", 0)
                                 selected_classes.add(prereq["course_code"])
@@ -208,8 +218,8 @@ class make_a_schedule:
                             unmet_dicts = [
                                 c for c in self.all_courses if c["course_code"] in unmet
                             ]
-                            selected_classes.update(unmet_dicts)
-                            self.added_courses.update(unmet_dicts)
+                            selected_classes.update(c["course_code"] for c in unmet_dicts)
+                            self.added_courses.update(c["course_code"] for c in unmet_dicts)
                             for prereq in unmet_dicts: 
                                 self.credits += prereq.get("credits", 0)
                                 selected_classes.add(prereq["course_code"])
@@ -296,18 +306,20 @@ class make_a_schedule:
                 'arabic': ["ARAB 290", "ARAB 301", "ARAB 302", "ARAB 303", "ARAB 304"],
                 'chinese': ["CHIN 301", "CHIN 302", "CHIN 308", "CHIN 386"],
                 'italian': ["ITAL 206", "ITAL 208", "ITAL 303", "ITAL 317"],
-                'german': ["GRMN 205", "GRMN 206", "GRMN 212", "GRMN 290", "GRMN 306", "GRMN 310"],
+                'german': ["GRMN 203", "GRMN 205", "GRMN 206", "GRMN 212", "GRMN 290", "GRMN 306", "GRMN 310"],
                 'japanese': ["JAPN 300", "JAPN 301", "JAPN 302", "JAPN 303", "JAPN 305", "JAPN 307"],
                 'russian': ["RUSN 303", "RUSN 304", "RUSN 310", "RUSN 320","RUSN 330", "RUSN 340",  "RUSN 306"],
             } 
-            self.add_course(language_sup[self.language])
-            self.add_course(language_sup[self.language])
 
-            # for lang_code in language_sup.get(self.language, []):
-            #     lang_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
-            #     if lang_course and lang_course["course_code"] not in self.added_courses:
-            #         self.schedule.append(lang_course)
-            #         self.added_courses.add(lang_course["course_code"])
+            # self.add_course(language_sup[self.language])
+            # self.add_course(language_sup[self.language])
+            sup_courses = [] 
+            for lang_code in language_sup.get(self.language):
+                sup_course = next((c for c in self.all_courses if c.get("course_code") == lang_code), None)
+                # print(sup_course)
+                sup_courses.append(sup_course)
+            self.add_course(sup_courses)
+            self.add_course(sup_courses)
 
 
             
@@ -327,8 +339,11 @@ class make_a_schedule:
         credits_needed = 120 - self.credits
         while not credits_needed <= 0: 
             self.add_course(self.all_courses)
+            if self.schedule[-1].get("credits") > 4: 
+                self.schedule.pop()
             credits_needed = 120 - self.credits
         for i in self.schedule: 
+
             if i["tag"] == "unassigned": 
                 i["tag"] = "elective"
         return
@@ -348,20 +363,79 @@ class make_a_schedule:
         self.add_any_electives()
         for k in self.schedule: 
             k["status"] = False
+            if k["course_code"] == 'DATA 201':
+                k["logic"] = 'or'
+               
+            elif k["course_code"] == 'MATH 112' or k["course_code"] == 'MATH 132' or k["course_code"] == 'MATH 211' or k["course_code"] == 'MATH 212' or k["course_code"] == 'MATH 213' or k["course_code"] == 'MATH 214' or k["course_code"] == 'MATH 351' or k["course_code"] == 'MATH 352':
+                k["logic"] = 'or'
+                        
+            elif k["course_code"] == 'CHEM 205' or k["course_code"] == 'CHEM 206' or k["course_code"] == 'CHEM 208' or k["course_code"] == 'CHEM 207'or k["course_code"] == 'CHEM 415':
+                if k["course_code"] == 'CHEM 207':
+                    k["prereqs"] = ['CHEM 206']
+                if k["course_code"] == 'CHEM 415':
+                    k["prereqs"] = ['CHEM 314', "BIOL 314"]
+                k["logic"] = 'or'
+            
+            elif k["course_code"] == 'CHEM 209':
+                k["prereqs"] = ['CHEM 206']
+            
+            elif k["course_code"] == 'CHEM 314':
+                k["prereqs"] = ['CHEM 207', 'CHEM 205', 'CHEM 209', 'CHEM 208']
+           
+            elif k["course_code"] == 'FREN 212' or k["course_code"] == 'FREN 303' or k["course_code"] == 'FREN 304':
+                k["logic"] = 'or'
+            
+            elif k["course_code"] == 'KINE 303' or k["course_code"] == 'KINE 304':
+                k["logic"] = 'or'
+            elif k['course_code'] == 'CSCI 243':
+                k["logic"] = 'or'
+            elif k["credits"] > 4:
+                if not k['course_code'] == "ABROAD":
+                    self.schedule.remove(k)
+                    credits_needed = 120 - self.credits
+                    while not credits_needed <= 0: 
+                        self.add_course(self.all_courses)
+                        credits_needed = 120 - self.credits
+                    for i in self.schedule: 
+                        if i["tag"] == "unassigned": 
+                            i["tag"] = "elective"
+
+            #elif k['course_code'] == 'BUAD 350':
+
+        
+        
         return self.schedule
     
 
-    # def add_course_to_product(self, course, semester_idx):
-    #     semester = self.semester_keys[semester_idx]
-    #     if course["prereqs"]: 
-    #         for prereq in course["prereqs"]:
-    #             if prereq["status"] == False: 
-    #                 self.add_course_to_product(prereq, semester_idx) #AHHHHHH RECURSION
-    #     else:  
-    #         course["status"] = True
-    #         self.schedule.remove(course)
-    #         self.product[semester].append(course) 
-    #         return 
+    def sort_schedule(self): 
+        self.compile()
+        prereq_map = defaultdict(set)
+        is_prereq = set()
+        has_prereqs = set()
+
+        for course in self.schedule:
+            code = course["course_code"]
+            for prereq in course.get("prereqs", []):
+                prereq_map[prereq].add(code)
+                is_prereq.add(prereq)
+                has_prereqs.add(code)
+
+        def get_sort_key(course):
+            code = course["course_code"]
+            # Priority: 0 = only prereq, 1 = both, 2 = only has prereqs, 3 = neither
+            if code in is_prereq and code in has_prereqs:
+                tier = 1
+            elif code in is_prereq:
+                tier = 0
+            elif code in has_prereqs:
+                tier = 2
+            else:
+                tier = 3
+            return (tier, -len(prereq_map.get(code, [])))
+
+        self.schedule = sorted(self.schedule, key=get_sort_key)
+        return self.schedule
+    
 
 
     def make_schedule(self):
@@ -375,12 +449,12 @@ class make_a_schedule:
             'Year 4 Fall Semester': [],
             'Year 4 Spring Semester': []
         }
-        self.compile()
-        if (self.credits - self.incoming_creds) <= 105: 
-            del self.product['Year 4 Spring Semester'] #graduate a semester early 
+        self.sort_schedule()
+        # if (self.credits - self.incoming_creds) <= 110: 
+        #     del self.product['Year 4 Spring Semester'] #graduate a semester early 
 
-        if (self.credits - self.incoming_creds) <= 90: 
-            del self.product['Year 4 Fall Semester']
+        # if (self.credits - self.incoming_creds) <= 100: 
+        #     del self.product['Year 4 Fall Semester']
         
         self.semester_keys = list(self.product.keys())
         coll_100 = next((c for c in self.schedule if 'COLL 100' in c.get("coll")), None)
@@ -390,30 +464,17 @@ class make_a_schedule:
         self.schedule = [ {**d, "status": True} if d["course_code"] == coll_150["course_code"] else d for d in self.schedule]
         self.product["Year 1 Spring Semester"].append(coll_150)
         if self.language != "N/A":
-            lang1 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
-            self.product["Year 1 Fall Semester"].append(lang1)
-            self.schedule = [ {**d, "status": True} if d["course_code"] == lang1["course_code"] else d for d in self.schedule]
-            lang2 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
-            self.product["Year 1 Spring Semester"].append(lang2)
-            self.schedule = [ {**d, "status": True} if d["course_code"] == lang2["course_code"] else d for d in self.schedule]
-            lang3 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
-            self.product["Year 2 Fall Semester"].append(lang3)
-            self.schedule = [ {**d, "status": True} if d["course_code"] == lang3["course_code"] else d for d in self.schedule]
-            lang4 = next((c for c in self.schedule if c.get("tag") == 'lang' and c.get("status") == False), None)
-            self.product["Year 2 Spring Semester"].append(lang4)
-            self.schedule = [ {**d, "status": True} if d["course_code"] == lang4["course_code"] else d for d in self.schedule]
-            if self.major1 == "international relations" or self.major2 == "international relations":
-                lang5 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
-                self.product["Year 3 Fall Semester"].append(lang5)
-                self.schedule = [ {**d, "status": True} if d["course_code"] == lang5["course_code"] else d for d in self.schedule]
-                if not self.study_abroad:
-                    lang6 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
-                    self.product["Year 3 Spring Semester"].append(lang6)
-                    self.schedule = [ {**d, "status": True} if d["course_code"] == lang6["course_code"] else d for d in self.schedule]
-                else: 
-                    lang6 = next((c for c in self.schedule if c.get("tag") == 'lang'and c.get("status") == False), None)
-                    self.product["Year 4 Fall Semester"].append(lang6)
-                    self.schedule = [ {**d, "status": True} if d["course_code"] == lang6["course_code"] else d for d in self.schedule]
+            semester_idx = 0
+            for d in self.schedule: 
+                if d.get('tag') == 'lang': 
+                    if (self.major1 == "international relations" or self.major2 == "international relations") and self.study_abroad and semester_idx == 6:
+                        semester_idx += 1
+                    if semester_idx > 7:
+                        break
+                        #print(semester_idx)
+                    d['status'] = True
+                    self.product[self.semester_keys[semester_idx]].append(d)
+                    semester_idx += 1 
         if self.study_abroad: 
                 abroad_class = next((c for c in self.schedule if c.get("tag") == 'abroad'), None)
                 self.schedule = [ {**d, "status": True} if d["course_code"] == abroad_class["course_code"] else d for d in self.schedule]
@@ -426,65 +487,60 @@ class make_a_schedule:
         while not all(d["status"] for d in self.schedule) and loops < max_loops:
             loops += 1
             try:  
-                for i in self.schedule: 
-                    if i.get("status"):
+                for course in self.schedule: 
+                    if course.get("status"):
                         continue  # already scheduled
                     
-                    found_place = False
-                    end = 0 
-                    while not found_place and end < 32:
-                        end += 1
-                        credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester))
-                        if (credits_in_semester + i.get("credits")) > 15:
-                            semester_idx = (semester_idx + 1) % len(self.semester_keys)
-                            semester = self.semester_keys[semester_idx]
-                        elif (credits_in_semester + i.get("credits")) <= 18 and end > 8: 
-                            found_place = True
-                        else: 
-                            found_place = True
-                    # if end == 32: 
-                        # raise ValueError(f"Course: {i.get('course_code')} could not be placed")
-                    
-                    if i.get("prereqs"): 
-                        placed = 0 
-                        for prereq in i.get("prereqs"): 
-                            done = 0  
-                            pre_in_schedule = next((c for c in self.schedule if prereq in c.get("course_code")), None)
-                            
-                            # print(pre_in_schedule.get("course_code"))
-                            if i.get("logic") == 'or' and placed > 0:
-                                done += 1
-                                break
-                            elif not pre_in_schedule: 
-                                print(i)
-                                raise TypeError(f"Error with course {prereq} as a prereq for {i.get('course_code')}")
-                            if pre_in_schedule.get("status") == False:
-                                if i.get("logic") == 'or' and placed > 0:
-                                    done += 1
-                                    break
-                                else: 
-                                    break
-                            
-                            for sem in range(0,semester_idx+1):
-                                if pre_in_schedule in self.product[self.semester_keys[sem]]:
-                                    if pre_in_schedule in self.product[self.semester_keys[semester_idx]]:
-                                        semester_idx = (semester_idx + 1) % len(self.semester_keys)
-                                        semester = self.semester_keys[semester_idx]
-                                        credits_in_semester = sum(d.get("credits", 0) for d in self.product.get(semester))
-                                        if (credits_in_semester + pre_in_schedule.get("credits")) <= 18:
-                                            done += 1
-                                            placed += 1
-                                        else:
-                                            break
-                                    else:     
-                                        done += 1
-                                        placed += 1
-                        if done != 1: 
-                            continue
+                    placed = False
 
-                    i["status"] = True
-                    self.product[semester].append(i)
-                    # print(f"Course: {i.get('course_code')} scheduled!")
+                    # Try two passes: first for ≤15 credits, then for ≤18
+                    for credit_limit in [15, 18]:
+                        for semester_idx, semester in enumerate(self.semester_keys):
+                            # Check prereqs are met in earlier semesters
+                            prereqs = course.get("prereqs", [])
+                            logic = course.get("logic", "and")
+                            if logic is None:
+                                logic = "and" 
+                            satisfied = []
+
+                            for prereq in prereqs:
+                                prereq_satisfied = False
+                                prereq_semester_idx = -1
+
+                                for prev_idx in range(semester_idx):
+                                    for prev_course in self.product[self.semester_keys[prev_idx]]:
+                                        if prev_course.get("course_code") == prereq and prev_course.get("status"):
+                                            prereq_satisfied = True
+                                            prereq_semester_idx = prev_idx
+                                            break
+                                    if prereq_satisfied:
+                                        break
+                                
+                                # Ensure prerequisites are at least one semester before
+                                if prereq_satisfied and prereq_semester_idx >= semester_idx:
+                                    prereq_satisfied = False
+                                
+                                satisfied.append(prereq_satisfied)
+
+
+                            if prereqs:
+                                if (logic == "and" and not all(satisfied)) or (logic == "or" and not any(satisfied)):
+                                    continue  # prereqs not met, skip to next semester
+
+                            # Check current semester credits
+                            total_credits = sum(d.get("credits", 0) for d in self.product[semester])
+                            if total_credits + course.get("credits", 0) > credit_limit:
+                                continue  # semester is full under this limit
+
+                            # Place the course
+                            course["status"] = True
+                            self.product[semester].append(course)
+                            placed = True
+                            break  # break out of semester loop
+
+                        if placed:
+                            break  # break out of credit limit loop if placed
+
             except Exception as e:
                 print(f"Error during scheduling: {e}")
                 traceback.print_exc()
@@ -492,7 +548,7 @@ class make_a_schedule:
         print("unplaced courses: ")
         for i in self.schedule: 
             if not i.get("status"):
-                print(i.get('course_code'), i.get("credits"))
+                print(i.get('course_code'), i.get("credits"), i.get('logic'), i.get('prereqs'))
                 
         return self.product
     
@@ -538,33 +594,52 @@ class make_a_schedule:
         plt.show()
 
 
-hola = make_a_schedule('economics', 'french', minor = 'psychology', study_abroad= True, credits = 15)
-trying = hola.make_schedule() 
 
-print("1 Fall: ") 
-for i in trying['Year 1 Fall Semester']: 
-    print(i.get("course_code"), i.get("credits"))
-print("1 spring: ") 
-for i in trying['Year 1 Spring Semester']: 
-   print(i.get("course_code"), i.get("credits"))
-print("2 Fall: ") 
-for i in trying['Year 2 Fall Semester']: 
-   print(i.get("course_code"), i.get("credits"))
-print("2 spring: ") 
-for i in trying['Year 2 Spring Semester']: 
-    print(i.get("course_code"), i.get("credits"))
-print("3 Fall: ") 
-for i in trying['Year 3 Fall Semester']: 
-   print(i.get("course_code"), i.get("credits"))
-print("3 spring: ") 
-for i in trying['Year 3 Spring Semester']: 
-   print(i.get("course_code"), i.get("credits"))
-print("4 Fall: ") 
-for i in trying['Year 4 Fall Semester']: 
-    print(i.get("course_code"), i.get("credits"))
-if 'Year 4 Spring Semester' in trying:
-    print("4 Spring: ") 
-    for i in trying['Year 4 Spring Semester']: 
-       print(i.get("course_code"), i.get("credits"))
+major_filepath = os.path.join("data", "majors_list.npy")
+all_majors = np.load(major_filepath, allow_pickle=True).tolist()
+minor_filepath = os.path.join("data", "minors_list.npy")
+minors = np.load(minor_filepath, allow_pickle=True).tolist()
+
+# hola = make_a_schedule('international relations', 'german', study_abroad= False, credits = 15)
+# trying = hola.sort_schedule() 
+# for i in trying: 
+#     print(i.get("course_code"), i.get("credits"), i.get("tag"))
+
+langs = ['spanish', 'french', 'arabic', 'chinese', 'italian', 'german', 'japanese', 'russian']
+for i in langs: 
+    hola = make_a_schedule('international relations', i, study_abroad= False, credits = 15)
+    print(f"Schedule for {i}")
+    trying = hola.make_schedule() 
+# for j in minors: 
+#     hola = make_a_schedule('government', 'french', minor = j, study_abroad= False, credits = 15)
+#     print(f"Schedule for {j}")
+#     trying = hola.make_schedule() 
+
+
+# print("1 Fall: ") 
+# for i in trying['Year 1 Fall Semester']: 
+#     print(i.get("course_code"), i.get("credits"))
+# print("1 spring: ") 
+# for i in trying['Year 1 Spring Semester']: 
+#    print(i.get("course_code"), i.get("credits"))
+# print("2 Fall: ") 
+# for i in trying['Year 2 Fall Semester']: 
+#    print(i.get("course_code"), i.get("credits"))
+# print("2 spring: ") 
+# for i in trying['Year 2 Spring Semester']: 
+#     print(i.get("course_code"), i.get("credits"))
+# print("3 Fall: ") 
+# for i in trying['Year 3 Fall Semester']: 
+#    print(i.get("course_code"), i.get("credits"))
+# print("3 spring: ") 
+# for i in trying['Year 3 Spring Semester']: 
+#    print(i.get("course_code"), i.get("credits"))
+# print("4 Fall: ") 
+# for i in trying['Year 4 Fall Semester']: 
+#     print(i.get("course_code"), i.get("credits"))
+# if 'Year 4 Spring Semester' in trying:
+#     print("4 Spring: ") 
+#     for i in trying['Year 4 Spring Semester']: 
+#        print(i.get("course_code"), i.get("credits"))
 
 

@@ -104,7 +104,7 @@ for i in links:
                     elif 'or' in logic_keywords:
                         prereq_logic = 'or'
                     else:
-                        prereq_logic = None  # Or potentially 'single' if there's one prereq without logic
+                        prereq_logic = 'none'  # Or potentially 'single' if there's one prereq without logic
 
                 else:
                     prereq_logic = None # No prerequisite section found

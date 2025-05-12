@@ -129,7 +129,7 @@ majors_dict = {
 
      "kinesiology": {
         "requirements": [
-            {"type": "all_of", "courses": ["KINE 303", "KINE 304"]},
+            {"type": "all_of", "courses": ["BIOL 203", "BIOL 203L", "KINE 303", "KINE 304"]},
             {"type": "choose_n", "n": 1, "groups": [
                 {"type": "any_of", "courses": ["KINE 308", "KINE 394"]},
                 {"type": "any_of", "courses": ["KINE 393", "KINE 401", "KINE 405", "KINE 406", "KINE 455","KINE 493"]}
@@ -229,7 +229,7 @@ minors_dict = {
      "biochemistry": {
         "requirements": [
             {"type": "choose_n", "n": 1, "groups": [
-                {"type": "any_of", "courses": ["CHEM 207", "CHEM 209", "CHEM 307"]},
+                {"type": "any_of", "courses": ['CHEM 103','CHEM 206', "CHEM 207", "CHEM 209", "CHEM 307"]},
                 {"type": "any_of", "courses": ["BIOL 225", "BIOL 203"]},
                 {"type": "any_of", "courses": ["BIOL 220", "BIOL 204", "CHEM 208", "CHEM 305", "CHEM 308", "CHEM 335"]},
                 {"type": "any_of", "courses": ["CHEM 314", "CHEM 414", "BIOL 314", "BIOL 414"]},
@@ -254,7 +254,7 @@ minors_dict = {
     }, 
     "chemistry": {
         "requirements": [
-            {"type": "all_of", "courses": ["CHEM 103", "CHEM 208", "CHEM 103L", "CHEM 206", "CHEM 206L", "CHEM 209", "CHEM 253"]},
+            {"type": "all_of", "courses": ["CHEM 103", "CHEM 208", "CHEM 103L", "CHEM 206", "CHEM 206L", "CHEM 207", "CHEM 209", "CHEM 253"]},
             {"type": "choose_n", "n": 1, "groups": [
                 {"type": "any_of", "courses": ["CHEM 254", "CHEM 256"]},
                 {"type": "any_of", "courses": ["CHEM 301", "CHEM 309", "CHEM 312", "CHEM 341", "CHEM 361"]},
@@ -265,7 +265,7 @@ minors_dict = {
     }, 
     "kinesiology": {
         "requirements": [
-            {"type": "all_of", "courses": ["KINE 303", "KINE 304"]},
+            {"type": "all_of", "courses": ["BIOL 203", "BIOL 203L", "KINE 303", "KINE 304"]},
             {"type": "choose_n", "n": 5, "groups": [
                 {"type": "any_of", "courses": ["KINE 200", "KINE 204", "KINE 240", "KINE 270", "KINE 280", "KINE 290", "KINE 295", "KINE 300", "KINE 301", "KINE 303", "KINE 304", "KINE 305", "KINE 308", "KINE 314", "KINE 315", "KINE 320", "KINE 321", "KINE 322", "KINE 335", 
                                                "KINE 340", "KINE 350", "KINE 352", "KINE 360", "KINE 365", "KINE 380", "KINE 393", "KINE 394", "KINE 405", "KINE 422", "KINE 442", "KINE 450", "KINE 455", "KINE 485", "KINE 493", "KINE 494"]}
@@ -275,7 +275,7 @@ minors_dict = {
     }, 
     "business analytics": {
         "requirements": [
-            {"type": "all_of", "courses": ["BUAD 330", "BUAD 350", "BUAD 351", "BUAD 352", "BUAD 466", "BUAD 467", "BUAD 468"]},
+            {"type": "all_of", "courses": ["BUAD 231", "BUAD 330", "BUAD 350", "BUAD 351", "BUAD 352", "BUAD 466", "BUAD 467", "BUAD 468"]},
             {"type": "choose_n", "n": 1, "groups": [
                 {"type": "any_of", "courses": ["BUAD 460", "BUAD 461", "BUAD 462", "BUAD 463", "BUAD 465", "BUAD 467", "BUAD 469", "BUAD 482"]}
 
