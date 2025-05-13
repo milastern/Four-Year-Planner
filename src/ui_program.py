@@ -28,7 +28,8 @@ app.layout = html.Div(
         "padding": "20px",                # space inside the border
         "margin": "20px",                 # space outside the border
         "height": "95vh",                 # fill most of the viewport height
-        "boxSizing": "border-box"         # include padding in height
+        "boxSizing": "border-box", 
+        "minHeight": "40x0px"
     },
     children = [
         html.Div([
@@ -125,7 +126,7 @@ app.layout = html.Div(
         
         html.Div(id='output-div') ] # Placeholder for the chart or user feedback 
 
-) 
+)
 
 # Callback to dynamically update dropdown visibility and options
 @app.callback(
@@ -199,33 +200,58 @@ def handle_submission(primary_major:  str,
         html.Div: The HTML div containing the generated course schedule.
     """
     if n_clicks > 0:
+        try: 
         # Validate required inputs
-        if not primary_major:
-            return "Please select a primary major."
-        if lang is None:
-            return "Please enter the language you wish to take or indicate that this requirement is not applicable."
+            if not primary_major:
+                return "Please select a primary major."
+            if lang is None:
+                return "Please enter the language you wish to take or indicate that this requirement is not applicable."
 
-        # Build output messages
-        output = []
-        if degree_type == "double": 
-            do_it = make_a_schedule(primary_major,lang, secondary_major, study_abroad= abroad, credits = credits)
+            # Build output messages
+            output = []
+            if degree_type == "double": 
+                do_it = make_a_schedule(primary_major,lang, secondary_major, study_abroad= abroad, credits = credits)
 
-        elif degree_type =='major-minor':
-            do_it = make_a_schedule(primary_major,lang, minor= minor, study_abroad= abroad, credits = credits)   
+            elif degree_type =='major-minor':
+                do_it = make_a_schedule(primary_major,lang, minor= minor, study_abroad= abroad, credits = credits)   
 
-        else: 
-            do_it = make_a_schedule(primary_major,lang, study_abroad= abroad, credits = credits)
-        
-        buf = io.BytesIO()
-        do_it.make_chart(output=buf)  # Modify make_chart to accept a buffer instead of saving to file
-        buf.seek(0)
-        encoded_image = base64.b64encode(buf.read()).decode('utf-8')
-        src = f'data:image/png;base64,{encoded_image}'
+            else: 
+                do_it = make_a_schedule(primary_major,lang, study_abroad= abroad, credits = credits)
+            
+            buf = io.BytesIO()
+            do_it.make_chart(output=buf)  # Modify make_chart to accept a buffer instead of saving to file
+            buf.seek(0)
+            encoded_image = base64.b64encode(buf.read()).decode('utf-8')
+            src = f'data:image/png;base64,{encoded_image}'
+        except Exception as e:
+            return "", f"Error: {str(e)}"  # display error
 
-        return html.Div([
-            html.H1("Course Schedule"),
-            html.Img(src=src, style={'width': '60%', 'height': 'auto'})
-        ])
+        return  html.Div([
+        html.Div(style={"height": "50px"}),
+        html.H5("Your Schedule:", className="mb-3"),
+
+        html.Img(
+            src=src,
+            style={
+        "border": "2px solid #444",
+        "borderRadius": "0",
+        "maxWidth": "70%",      # Reduced from 100% to 70%
+        "height": "auto",
+        "marginBottom": "20px"
+    }
+        ),
+
+        html.A(
+            "Download Schedule",                     # Download link
+            download="schedule.png",
+            href=f"data:image/png;base64,{encoded_image}",
+            target="_blank",
+            className="btn btn-primary"
+        )
+    ],  style={"textAlign": "left", 
+               "marginTop": "15px", 
+               "marginLeft": "30px"
+            }) 
        
     return ""
 

@@ -747,7 +747,7 @@ class make_a_schedule:
             for i in self.schedule: 
                 if not i.get("status"):
                     print(i.get("course_code"), i.get('prereqs'))
-                    raise OverflowError("Could not schedule these courses, please try again!")
+            raise OverflowError("Could not schedule these courses, please try again!")
                 
         return self.product
     
